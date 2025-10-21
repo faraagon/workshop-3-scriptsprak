@@ -45,11 +45,30 @@ foreach ($user in $data.users) {
     $deptCounts[$dept]++
 }
 
+Write-Host ""
 #Loop through list and print out result
 Write-Host "Användare per avdelning:"
-Write-Host ""
 Write-Host "============================"
 foreach ($dept in $deptCounts.Keys) {
     Write-Host "$dept : $($deptCounts[$dept]) användare"
 }
+
+
+# Exportera inaktiva användare till CSV
+$inactiveUsers | Select-Object samAccountName, displayName, lastLogon, department, title |
+Export-Csv -Path "inactive_users.csv" -NoTypeInformation
+
+Write-Host ""
+#Computers per site section
+Write-Host "Datorer per site:"
+Write-Host "============================"
+
+
+$computersBySite = $data.computers | Group-Object -Property site
+
+foreach ($group in $computersBySite) {
+    Write-Host "$($group.Name): $($group.Count) datorer"
+}
+
+Write-Host ""
 
