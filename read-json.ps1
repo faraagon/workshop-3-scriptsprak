@@ -14,13 +14,13 @@ Write-Host "Inaktiva användare (senaste 30 dagarna):"
 Write-Host "============================"
 
 
-#Create variable for inactive users
+#Create a list of users whose lastLogon date is older 
+#than 30 days compared to the current date
 $inactiveUsers = $data.users | Where-Object {
     #Convert lastLogon to datetime and compare to todays date minus 30 days
     ([datetime]$_.lastLogon) -lt (Get-Date).AddDays(-30)
 }
-
-#Loop through the results and print out each inactive user
+#Loop through each inactive user and calculate how many days since last login
 foreach ($user in $inactiveUsers) {
     $daysInactive = ((Get-Date) - [datetime]$user.lastLogon).Days
     Write-Host "$($user.displayName) $daysInactive dagar inaktiv"
@@ -32,7 +32,7 @@ Write-Host ""
 Write-Host "Totalt inaktiva användare: $($inactiveUsers.Count)"
 
 
-#Empty counter for workers per department
+#Empty counter to count users per department
 $deptCounts = @{} 
 
 #Loop through departments, if it doesn't exist add it. If it exist, +1
@@ -54,7 +54,7 @@ foreach ($dept in $deptCounts.Keys) {
 }
 
 
-# Exportera inaktiva användare till CSV
+#Export inactive user to CSV
 $inactiveUsers | Select-Object samAccountName, displayName, lastLogon, department, title |
 Export-Csv -Path "inactive_users.csv" -NoTypeInformation
 
@@ -72,3 +72,37 @@ foreach ($group in $computersBySite) {
 
 Write-Host ""
 
+
+#Section for password age per user starts
+Write-Host "`nLösenordsålder per användare:"
+Write-Host "============================"
+#Loop through each user and calculate how many days ago the password was changed
+foreach ($user in $data.users) {
+    # Convert passwordLastSet to datetime and calculate the number of days, print it
+    $pwdAge = ((Get-Date) - [datetime]$user.passwordLastSet).Days
+    Write-Host "$($user.displayName): $pwdAge dagar gammalt lösenord"
+}
+
+
+
+#Oldest check-in section starts
+Write-Host "`nTopp 10 datorer med längst tid sen senaste användning::"
+Write-Host "============================"
+
+
+$data.computers |
+#Filter out posts without logon value
+Where-Object { $_.lastLogon -ne $null -and $_.lastLogon -ne "" } |
+
+#Sort after the oldest logon first
+Sort-Object -Property lastLogon |
+
+#Select the 10 oldest
+Select-Object -First 10 |
+
+#Calculate the time since last logon and print
+ForEach-Object {
+    $lastLogon = [datetime]$_.lastLogon
+    $daysSinceLogon = ((Get-Date) - $lastLogon).Days
+    Write-Host "$($_.name): $daysSinceLogon dagar sen senaste användning"
+}
